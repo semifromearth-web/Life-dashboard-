@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050507">
+<title>Life Dashboard</title>
+<style>
+:root{--bg:#050507;--card:#0d0e12;--line:#1b1d24;--tx:#eceef4;--mut:#737888;--g:#39ff88;--c:#22d3ee;--p:#ff3d81;--a:#ffb020;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding:14px 14px 96px;max-width:560px;margin:0 auto;font-variant-numeric:tabular-nums}
+header{display:flex;justify-content:space-between;align-items:baseline;margin:6px 2px 14px}
+h1{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.tag{font-size:12px;color:var(--a);border:1px solid #3a2c0d;border-radius:99px;padding:2px 9px}
+h2{font-size:17px;font-weight:600;margin:18px 2px 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px}
+.wide{grid-column:1/-1}
+.lb{font-size:13px;color:var(--mut)}
+.sb{font-size:13px;color:var(--mut);text-align:center}
+.ring{width:100%;max-width:112px;display:block;margin:8px auto 4px;overflow:visible}
+.rn{fill:var(--tx);font:700 17px system-ui,sans-serif;text-anchor:middle}
+.big{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
+.row{display:flex;justify-content:space-between;gap:8px}
+.days{display:flex;justify-content:space-between;font-size:12px;color:var(--mut);margin-top:4px}
+.days span{flex:1;text-align:center}
+.hm{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px}
+.hm i{aspect-ratio:1;border-radius:6px;background:var(--g)}
+.item{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)}
+.item:first-of-type{border-top:0}
+.eq{font-size:15px;padding:8px 0;border-top:1px solid var(--line)}
+.eq b{color:var(--p);font-weight:700}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:#0a0b0eee;border-top:1px solid var(--line);padding:6px 6px calc(8px + env(safe-area-inset-bottom,0px));backdrop-filter:blur(12px)}
+nav button{flex:1;background:none;border:0;color:var(--mut);font:600 13px system-ui,sans-serif;padding:10px 0;border-radius:12px}
+nav button.on{color:var(--tx);background:#16181f}
+nav button:focus-visible,.btn:focus-visible{outline:2px solid var(--c)}
+.btn{background:#16181f;color:var(--tx);border:1px solid var(--line);border-radius:12px;padding:11px 16px;font:600 14px system-ui,sans-serif;margin:10px 8px 0 0}
+canvas{width:100%;border-radius:16px;display:block;background:#050507;border:1px solid var(--line)}
+svg text{font-family:system-ui,sans-serif}
+</style>
+</head>
+<body>
+<header><h1 id="ttl">Today</h1><span class="tag">Demo data</span></header>
+<main id="v"></main>
+<nav id="nav"></nav>
+<script>
+const mul=s=>()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const N=35,DAY=864e5,GOAL_KM=20,GOAL_MIN=180;
+// PHASE 2: replace demo() with a Supabase fetch returning the same shape.
+async function load(){const r=mul(7),H=[],K=[],S=[];
+ for(let i=0;i<N;i++){H.push(Math.round(35+r()*62));K.push(r()<.42?+(3+r()*8).toFixed(1):0);S.push(Math.round(110+r()*330));}
+ const runs=K.map((km,i)=>km?{ago:N-1-i,km,pace:330+Math.round(r()*80)}:null).filter(Boolean).reverse();
+ return{H,K,S,runs};}
+const wd=i=>new Date(Date.now()-(N-1-i)*DAY).getDay(),L='SMTWTFS';
+const sum=a=>a.reduce((x,y)=>x+y,0),avg=a=>sum(a)/a.length,l7=a=>a.slice(-7);
+const hm=m=>`${Math.floor(m/60)}h ${String(Math.round(m%60)).padStart(2,'0')}m`;
+const pace=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}/km`;
+const ring=(p,col,big)=>`<svg class="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="#1b1d24" stroke-width="8"/><circle cx="50" cy="50" r="42" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${2.639*Math.min(p,100)} 264" transform="rotate(-90 50 50)" style="filter:drop-shadow(0 0 5px ${col})"/><text class="rn" x="50" y="56">${big}</text></svg>`;
+const bars=(v,col,fmt)=>{const W=300,Hh=110,m=Math.max(...v,avg(v))*1.12,bw=W/v.length,ay=Hh-avg(v)/m*Hh;
+ return`<svg viewBox="0 0 ${W} ${Hh+4}" width="100%">${v.map((x,i)=>{const h=x/m*Hh;return`<rect x="${i*bw+bw*.16}" y="${Hh-h}" width="${bw*.68}" height="${h}" rx="5" fill="${col}" opacity="${i==v.length-1?1:.55}" ${i==v.length-1?`style="filter:drop-shadow(0 0 4px ${col})"`:''}/>`}).join('')}<line x1="0" x2="${W}" y1="${ay}" y2="${ay}" stroke="#737888" stroke-dasharray="4 4"/><text x="${W}" y="${ay-4}" text-anchor="end" font-size="10" fill="#737888">avg ${fmt(avg(v))}</text></svg>
+ <div class="days">${v.map((_,i)=>`<span>${L[wd(N-v.length+i)]}</span>`).join('')}</div>`};
+const card=(t,lb,body,sb)=>`<div class="card" data-t="${t}"><div class="lb">${lb}</div>${body}<div class="sb">${sb}</div></div>`;
+const streak=H=>{let s=0;for(let i=N-1;i>=0&&H[i]>=50;i--)s++;return s};
+const EQ=[['one-page websites',8],['5K training blocks',12],['small apps from scratch',40],['books read cover to cover',9]];
+let D,tab='today',seed=1;
+const V={
+ today:()=>`<div class="grid">
+  ${card('habits','Habits',ring(D.H[N-1],'var(--g)',D.H[N-1]+'%'),'done today')}
+  ${card('habits','Streak',`<div class="big" style="margin:22px 0 14px;text-align:center;color:var(--g)">${streak(D.H)}</div>`,'days at 50%+')}
+  ${card('runs','Running',ring(sum(l7(D.K))/GOAL_KM*100,'var(--c)',sum(l7(D.K)).toFixed(1)),'km this week')}
+  ${card('scroll','Scrolling',ring(D.S[N-1]/GOAL_MIN*100,'var(--p)',hm(D.S[N-1]).slice(0,-4)),hm(D.S[N-1])+' today')}
+  <div class="card wide" data-t="scroll"><div class="lb">This week's scroll time could have been</div><div class="big" style="color:var(--p);font-size:30px;margin-top:6px">${(sum(l7(D.S))/60/EQ[0][1]).toFixed(1)} ${EQ[0][0]}</div></div></div>`,
+ habits:()=>{const off=wd(0);return`<div class="card"><div class="lb">Last 5 weeks</div><div class="days">${[...L].map(c=>`<span>${c}</span>`).join('')}</div><div class="hm">${'<i style="visibility:hidden"></i>'.repeat(off)}${D.H.map(p=>`<i style="opacity:${(.1+p/100*.9).toFixed(2)}" title="${p}%"></i>`).join('')}</div></div>
+  <h2>Last 7 days</h2><div class="card">${bars(l7(D.H),'var(--g)',x=>Math.round(x)+'%')}</div>`},
+ runs:()=>{const k=D.runs;return`<div class="grid"><div class="card"><div class="lb">Longest run</div><div class="big" style="color:var(--c)">${Math.max(...k.map(r=>r.km))}</div><div class="lb">km</div></div><div class="card"><div class="lb">Fastest pace</div><div class="big" style="color:var(--c);font-size:30px;margin:10px 0">${pace(Math.min(...k.map(r=>r.pace)))}</div></div></div>
+  <h2>Distance, last 7 days</h2><div class="card">${bars(l7(D.K),'var(--c)',x=>x.toFixed(1)+'km')}</div>
+  <h2>Recent runs</h2><div class="card">${k.slice(0,6).map(r=>`<div class="item"><span>${r.ago?r.ago+' days ago':'Today'}</span><span>${r.km} km at ${pace(r.pace)}</span></div>`).join('')}</div>`},
+ scroll:()=>{const wk=sum(l7(D.S))/60;return`<div class="card"><div class="lb">Today</div><div class="big" style="color:var(--p)">${hm(D.S[N-1])}</div></div>
+  <h2>Last 7 days</h2><div class="card">${bars(l7(D.S),'var(--p)',hm)}</div>
+  <h2>${wk.toFixed(1)} hours this week. At this pace, in a month that is</h2><div class="card">${EQ.map(([n,c])=>`<div class="eq"><b>${(wk*4.3/c).toFixed(1)}</b> ${n}</div>`).join('')}</div>`},
+ art:()=>`<canvas id="cv" width="640" height="460"></canvas><button class="btn" id="rr">New variation</button><button class="btn" id="sv">Save image</button>`
+};
+function draw(){const c=document.getElementById('cv'),x=c.getContext('2d'),W=c.width,Hh=c.height;
+ x.fillStyle='#050507';x.fillRect(0,0,W,Hh);x.globalCompositeOperation='lighter';x.lineJoin='round';
+ [[D.H,'#39ff88'],[D.K,'#22d3ee'],[D.S,'#ff3d81']].forEach(([a,col],j)=>{
+  const m=Math.max(...a),r=mul(seed*97+j*13),up=a.map(v=>(v/m)*(.45+r()*.9)*Hh*.42),dn=a.map(v=>(v/m)*(.3+r()*.6)*Hh*.3),px=i=>i/(N-1)*W;
+  x.beginPath();up.forEach((p,i)=>i?x.lineTo(px(i),Hh/2-p):x.moveTo(0,Hh/2-p));
+  for(let i=N-1;i>=0;i--)x.lineTo(px(i),Hh/2+dn[i]);x.closePath();
+  x.fillStyle=col+'44';x.strokeStyle=col;x.lineWidth=2;x.shadowColor=col;x.shadowBlur=14;x.fill();x.stroke();});}
+function render(){const T={today:'Today',habits:'Habits',runs:'Runs',scroll:'Scroll time',art:'Your week as art'};
+ document.getElementById('ttl').textContent=T[tab];document.getElementById('v').innerHTML=V[tab]();
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==tab));
+ document.querySelectorAll('[data-t].card').forEach(e=>e.onclick=()=>go(e.dataset.t));
+ if(tab=='art'){draw();rr.onclick=()=>{seed++;draw()};sv.onclick=()=>cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='my-week.png';a.click()})}}
+const go=t=>{tab=t;render();scrollTo(0,0)};
+document.getElementById('nav').innerHTML=[['today','Today'],['habits','Habits'],['runs','Runs'],['scroll','Scroll'],['art','Art']].map(([t,n])=>`<button data-t="${t}">${n}</button>`).join('');
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
+load().then(d=>{D=d;render()});
+</script>
+</body>
+</html>
