@@ -101,7 +101,7 @@ const V={
  scroll:()=>{const wk=sum(l7(D.S))/60;return`<div class="card"><div class="lb">Today${D.sampleScreen||mode=='demo'?' (sample data until screen tracking is added)':''}</div><div class="big" style="color:var(--p)">${hm(D.S[N-1])}</div></div>
   <h2>Last 7 days</h2><div class="card">${bars(l7(D.S),'var(--p)',hm)}</div>
   <h2>${wk.toFixed(1)} hours this week. At this pace, in a month that is</h2><div class="card">${EQ.map(([n,c])=>`<div class="eq"><b>${(wk*4.3/c).toFixed(1)}</b> ${n}</div>`).join('')}</div>`},
- setup:()=>`<div class="card"><div class="lb">Owner token</div><input id="tk" type="password" placeholder="Paste your owner token" autocomplete="off" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:15px system-ui,sans-serif"><button class="btn" id="tks">Save and load my data</button><button class="btn" id="tkc">Use demo data</button><p class="lb" style="margin-top:12px">Status: ${mode}${D&&D.err?' ('+D.err+')':''}</p></div>`,
+ setup:()=>`<div class="card"><div class="lb">Owner token</div><input id="tk" type="password" placeholder="Paste your owner token" autocomplete="off" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:15px system-ui,sans-serif"><button class="btn" id="tks">Save and load my data</button><button class="btn" id="tkc">Use demo data</button><p class="lb" style="margin-top:12px">Status: ${mode}${D&&D.err?' ('+D.err+')':''}<br>Widgets: ${wStatus}</p><button class="btn" id="tkw">Refresh widgets</button></div>`,
  art:()=>`<canvas id="cv" width="640" height="460"></canvas><button class="btn" id="rr">New variation</button><button class="btn" id="sv">Save image</button>`
 };
 function draw(){const c=document.getElementById('cv'),x=c.getContext('2d'),W=c.width,Hh=c.height;
@@ -111,19 +111,22 @@ function draw(){const c=document.getElementById('cv'),x=c.getContext('2d'),W=c.w
   x.beginPath();up.forEach((p,i)=>i?x.lineTo(px(i),Hh/2-p):x.moveTo(0,Hh/2-p));
   for(let i=N-1;i>=0;i--)x.lineTo(px(i),Hh/2+dn[i]);x.closePath();
   x.fillStyle=col+'38';x.strokeStyle=col;x.lineWidth=1.5;x.fill();x.stroke();});}
-let wBridge,lastW='';
+let wBridge,lastW='',wStatus='not run yet';
 function pushWidgets(){try{
- if(!D||!window.Capacitor||!(Capacitor.isNativePlatform&&Capacitor.isNativePlatform()))return;
- wBridge=wBridge||Capacitor.registerPlugin('WidgetBridge');
+ if(!D){wStatus='no data yet';return}
+ const C=window.Capacitor;
+ if(!C){wStatus='not running inside the Android app';return}
+ const P=wBridge||(wBridge=(C.Plugins&&C.Plugins.WidgetBridge)||(C.registerPlugin&&C.registerPlugin('WidgetBridge')));
+ if(!P||!P.setData){wStatus='widget plugin not found';return}
  const r=D.runs,wk=+sum(l7(D.K)).toFixed(1),hp=D.H[N-1],fast=r.filter(x=>x.pace).map(x=>x.pace),lg=r.length?Math.max(...r.map(x=>x.km)):0;
  const json=JSON.stringify({habits:{t:'Habits today',pct:hp,big:hp+'%',l1:streak(D.H)+' day streak',l2:'7-day avg '+Math.round(avg(l7(D.H)))+'%',l3:''},runs:{t:'Running this week',pct:Math.round(wk/GOAL_KM*100),big:wk.toFixed(1),l1:'Longest '+(lg?lg+' km':'-'),l2:'Fastest '+(fast.length?pace(Math.min(...fast)):'-'),l3:r.filter(x=>x.ago<7).length+' runs this week'}});
- if(json!==lastW){lastW=json;wBridge.setData({json})}
-}catch(e){}}
+ if(json!==lastW){wStatus='sending...';P.setData({json}).then(()=>{lastW=json;wStatus='sent at '+new Date().toLocaleTimeString()},e=>{wStatus='failed: '+(e&&e.message||e)})}
+}catch(e){wStatus='error: '+e.message}}
 function render(){pushWidgets();const T={today:'Today',habits:'Habits',runs:'Runs',scroll:'Scroll time',art:'Your week as art',setup:'Connect'};
  document.getElementById('ttl').textContent=T[tab];const tg=document.getElementById('tag');tg.textContent={live:'Live',cached:'Offline copy',demo:'Demo data',error:'Connection error'}[mode];tg.onclick=()=>go('setup');document.getElementById('v').innerHTML=V[tab]();
  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==tab));
  document.querySelectorAll('[data-t].card').forEach(e=>e.onclick=()=>go(e.dataset.t));
- if(tab=='setup'){tks.onclick=async()=>{const v=tk.value.trim();if(!v)return;localStorage.setItem('ld_token',v);D=await load();go('today')};tkc.onclick=async()=>{localStorage.removeItem('ld_token');D=await load();go('today')}}
+ if(tab=='setup'){tks.onclick=async()=>{const v=tk.value.trim();if(!v)return;localStorage.setItem('ld_token',v);D=await load();go('today')};tkw.onclick=()=>{lastW='';pushWidgets();setTimeout(render,700)};tkc.onclick=async()=>{localStorage.removeItem('ld_token');D=await load();go('today')}}
  if(tab=='art'){draw();rr.onclick=()=>{seed++;draw()};sv.onclick=()=>cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='my-week.png';a.click()})}}
 const go=t=>{tab=t;render();scrollTo(0,0)};
 document.getElementById('nav').innerHTML=[['today','Today'],['habits','Habits'],['runs','Runs'],['scroll','Scroll'],['art','Art']].map(([t,n])=>`<button data-t="${t}">${n}</button>`).join('');
