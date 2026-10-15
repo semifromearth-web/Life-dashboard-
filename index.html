@@ -111,7 +111,15 @@ function draw(){const c=document.getElementById('cv'),x=c.getContext('2d'),W=c.w
   x.beginPath();up.forEach((p,i)=>i?x.lineTo(px(i),Hh/2-p):x.moveTo(0,Hh/2-p));
   for(let i=N-1;i>=0;i--)x.lineTo(px(i),Hh/2+dn[i]);x.closePath();
   x.fillStyle=col+'38';x.strokeStyle=col;x.lineWidth=1.5;x.fill();x.stroke();});}
-function render(){const T={today:'Today',habits:'Habits',runs:'Runs',scroll:'Scroll time',art:'Your week as art',setup:'Connect'};
+let wBridge,lastW='';
+function pushWidgets(){try{
+ if(!D||!window.Capacitor||!(Capacitor.isNativePlatform&&Capacitor.isNativePlatform()))return;
+ wBridge=wBridge||Capacitor.registerPlugin('WidgetBridge');
+ const r=D.runs,wk=+sum(l7(D.K)).toFixed(1),hp=D.H[N-1],fast=r.filter(x=>x.pace).map(x=>x.pace),lg=r.length?Math.max(...r.map(x=>x.km)):0;
+ const json=JSON.stringify({habits:{t:'Habits today',pct:hp,big:hp+'%',l1:streak(D.H)+' day streak',l2:'7-day avg '+Math.round(avg(l7(D.H)))+'%',l3:''},runs:{t:'Running this week',pct:Math.round(wk/GOAL_KM*100),big:wk.toFixed(1),l1:'Longest '+(lg?lg+' km':'-'),l2:'Fastest '+(fast.length?pace(Math.min(...fast)):'-'),l3:r.filter(x=>x.ago<7).length+' runs this week'}});
+ if(json!==lastW){lastW=json;wBridge.setData({json})}
+}catch(e){}}
+function render(){pushWidgets();const T={today:'Today',habits:'Habits',runs:'Runs',scroll:'Scroll time',art:'Your week as art',setup:'Connect'};
  document.getElementById('ttl').textContent=T[tab];const tg=document.getElementById('tag');tg.textContent={live:'Live',cached:'Offline copy',demo:'Demo data',error:'Connection error'}[mode];tg.onclick=()=>go('setup');document.getElementById('v').innerHTML=V[tab]();
  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==tab));
  document.querySelectorAll('[data-t].card').forEach(e=>e.onclick=()=>go(e.dataset.t));
