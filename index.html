@@ -56,7 +56,7 @@ function demo(){const r=mul(7),H=[],K=[],S=[];
  return{H,K,S,runs};}
 const DASH_URL='https://bkxwezpdfjevrxwtwjwq.supabase.co',DASH_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJreHdlenBkZmpldnJ4d3R3andxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwMDY3OTAsImV4cCI6MjEwNzU4Mjc5MH0.82cNhr0VEvHp4ojOEHScFzgq-I-8VKg45vGGNcx9Jtw';
 const dkey=i=>{const d=new Date(Date.now()-(N-1-i)*DAY);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-let mode='demo';
+let mode='demo',at=0;
 async function load(){
  const tok=localStorage.getItem('ld_token'),dm=demo();
  if(!tok){mode='demo';return dm}
@@ -71,7 +71,7 @@ async function load(){
   rl.forEach(x=>{const i=idx[x.day];if(i==null)return;K[i]+=+x.distance_km;runs.push({ago:N-1-i,km:+(+x.distance_km).toFixed(1),pace:Math.round(x.pace_sec_per_km)||0})});
   runs.sort((a,b)=>a.ago-b.ago);K.forEach((v,i)=>K[i]=+v.toFixed(1));
   const S=dm.S.slice();let live=false;sl.forEach(x=>{const i=idx[x.day];if(i!=null){S[i]=x.minutes;live=true}});
-  const out={H,K,S,runs,sampleScreen:!live};localStorage.setItem('ld_cache',JSON.stringify(out));mode='live';return out
+  const out={H,K,S,runs,sampleScreen:!live};localStorage.setItem('ld_cache',JSON.stringify(out));mode='live';at=Date.now();return out
  }catch(e){const c=localStorage.getItem('ld_cache');if(c){mode='cached';return JSON.parse(c)}mode='error';dm.err=e.message;return dm}
 }
 const wd=i=>new Date(Date.now()-(N-1-i)*DAY).getDay(),L='SMTWTFS';
@@ -101,7 +101,7 @@ const V={
  scroll:()=>{const wk=sum(l7(D.S))/60;return`<div class="card"><div class="lb">Today${D.sampleScreen||mode=='demo'?' (sample data until screen tracking is added)':''}</div><div class="big" style="color:var(--p)">${hm(D.S[N-1])}</div></div>
   <h2>Last 7 days</h2><div class="card">${bars(l7(D.S),'var(--p)',hm)}</div>
   <h2>${wk.toFixed(1)} hours this week. At this pace, in a month that is</h2><div class="card">${EQ.map(([n,c])=>`<div class="eq"><b>${(wk*4.3/c).toFixed(1)}</b> ${n}</div>`).join('')}</div>`},
- setup:()=>`<div class="card"><div class="lb">Owner token</div><input id="tk" type="password" placeholder="Paste your owner token" autocomplete="off" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:15px system-ui,sans-serif"><button class="btn" id="tks">Save and load my data</button><button class="btn" id="tkc">Use demo data</button><p class="lb" style="margin-top:12px">Status: ${mode}${D&&D.err?' ('+D.err+')':''}<br>Widgets: ${wStatus}</p><button class="btn" id="tkw">Refresh widgets</button></div>`,
+ setup:()=>`<div class="card"><div class="lb">Owner token</div><input id="tk" type="password" placeholder="${localStorage.getItem('ld_token')?'Token saved (paste to replace)':'Paste your owner token'}" autocomplete="off" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:15px system-ui,sans-serif">${localStorage.getItem('ld_token')?'<button class="btn" id="tkr">Refresh now</button>':''}<button class="btn" id="tks">Save and load my data</button><button class="btn" id="tkc">Use demo data</button><p class="lb" style="margin-top:12px">Status: ${mode}${D&&D.err?' ('+D.err+')':''}<br>Widgets: ${wStatus}</p><button class="btn" id="tkw">Refresh widgets</button></div>`,
  art:()=>`<canvas id="cv" width="640" height="460"></canvas><button class="btn" id="rr">New variation</button><button class="btn" id="sv">Save image</button>`
 };
 function draw(){const c=document.getElementById('cv'),x=c.getContext('2d'),W=c.width,Hh=c.height;
@@ -123,10 +123,10 @@ function pushWidgets(){try{
  if(json!==lastW){wStatus='sending...';P.setData({json}).then(()=>{lastW=json;wStatus='sent at '+new Date().toLocaleTimeString()},e=>{wStatus='failed: '+(e&&e.message||e)})}
 }catch(e){wStatus='error: '+e.message}}
 function render(){pushWidgets();const T={today:'Today',habits:'Habits',runs:'Runs',scroll:'Scroll time',art:'Your week as art',setup:'Connect'};
- document.getElementById('ttl').textContent=T[tab];const tg=document.getElementById('tag');tg.textContent={live:'Live',cached:'Offline copy',demo:'Demo data',error:'Connection error'}[mode];tg.onclick=()=>go('setup');document.getElementById('v').innerHTML=V[tab]();
+ document.getElementById('ttl').textContent=T[tab];const tg=document.getElementById('tag');tg.textContent={live:'Live '+new Date(at).toTimeString().slice(0,5),cached:'Offline copy',demo:'Demo data',error:'Connection error'}[mode];tg.onclick=()=>go('setup');document.getElementById('v').innerHTML=V[tab]();
  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==tab));
  document.querySelectorAll('[data-t].card').forEach(e=>e.onclick=()=>go(e.dataset.t));
- if(tab=='setup'){tks.onclick=async()=>{const v=tk.value.trim();if(!v)return;localStorage.setItem('ld_token',v);D=await load();go('today')};tkw.onclick=()=>{lastW='';pushWidgets();setTimeout(render,700)};tkc.onclick=async()=>{localStorage.removeItem('ld_token');D=await load();go('today')}}
+ if(tab=='setup'){const rb=document.getElementById('tkr');if(rb)rb.onclick=async()=>{await refresh();go('today')};tks.onclick=async()=>{const v=tk.value.trim();if(!v)return;localStorage.setItem('ld_token',v);D=await load();go('today')};tkw.onclick=()=>{lastW='';pushWidgets();setTimeout(render,700)};tkc.onclick=async()=>{localStorage.removeItem('ld_token');D=await load();go('today')}}
  if(tab=='art'){draw();rr.onclick=()=>{seed++;draw()};sv.onclick=()=>cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='my-week.png';a.click()})}}
 const go=t=>{tab=t;render();scrollTo(0,0)};
 document.getElementById('nav').innerHTML=[['today','Today'],['habits','Habits'],['runs','Runs'],['scroll','Scroll'],['art','Art']].map(([t,n])=>`<button data-t="${t}">${n}</button>`).join('');
@@ -135,8 +135,14 @@ let theme=localStorage.getItem('ld_theme')||'dark';
 const applyTheme=()=>{document.documentElement.dataset.theme=theme;document.querySelector('meta[name=theme-color]').content=theme=='light'?'#f3f4f7':'#050507';th.textContent=theme=='light'?'Dark mode':'Light mode'};
 th.onclick=()=>{theme=theme=='dark'?'light':'dark';localStorage.setItem('ld_theme',theme);applyTheme()};
 applyTheme();
-load().then(d=>{D=d;render()});
-addEventListener('online',()=>load().then(d=>{D=d;render()}));
+let lastR=0;
+const refresh=()=>{lastR=Date.now();return load().then(d=>{D=d;if(tab!='setup')render();else pushWidgets()})};
+refresh();
+addEventListener('online',refresh);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastR>15000)refresh()});
+setInterval(()=>{if(!document.hidden&&Date.now()-lastR>60000)refresh()},30000);
+let ty=null;addEventListener('touchstart',e=>{ty=scrollY===0?e.touches[0].clientY:null},{passive:true});
+addEventListener('touchend',e=>{if(ty!=null&&e.changedTouches[0].clientY-ty>90)refresh();ty=null},{passive:true});
 </script>
 </body>
 </html>
