@@ -1,0 +1,7 @@
+{
+  "appId": "com.senn.lifedashboard",
+  "appName": "Life Dashboard",
+  "webDir": "www",
+  "backgroundColor": "#050507",
+  "server": { "androidScheme": "https" }
+}
