@@ -54,6 +54,7 @@ jobs:
               </style>
           </resources>
           XML
+      - run: bash add-widgets.sh
       - run: npx cap sync android
       - run: chmod +x android/gradlew && cd android && ./gradlew assembleDebug
       - name: Publish APK as a release
